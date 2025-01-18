@@ -1,13 +1,13 @@
-from requests import get, Response, exceptions
-from argparse import ArgumentParser, Namespace
-from typing import List, Any, Optional, Dict
-from pydantic import BaseModel
-import winsdk.windows.devices.geolocation as g
 import asyncio
 import json
 import os
-from dotenv import load_dotenv
+from argparse import ArgumentParser, Namespace
+from typing import Any, Dict, List, Optional
 
+import winsdk.windows.devices.geolocation as g
+from dotenv import load_dotenv
+from pydantic import BaseModel
+from requests import Response, exceptions, get
 
 load_dotenv()
 
