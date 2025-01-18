@@ -22,4 +22,5 @@ Install the required libraries:
 Run the script:
 
 `python weather.py --coordinates 'latitude,longitude' --language tr --unitGroup metric`
+
 Note: Use quotes for the value of the coordinate parameter.
