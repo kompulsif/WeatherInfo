@@ -110,7 +110,7 @@ class Weather:
         # Return the unit symbol based on the unit group.
         try:
             return SYMBOLS[self.unitg]
-        except:
+        except Exception:
             print("Unit Group error!")
             exit()
 
@@ -188,7 +188,7 @@ if __name__ == "__main__":
                 coordinates: List[float] = list(map(float, csarg[1:-1].split(",")))
             else:
                 raise ValueError
-        except:
+        except Exception:
             print("Format of coordinates; should be 'latitude,longitude'")
             exit()
     else:
