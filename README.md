@@ -11,6 +11,10 @@ This Python application provides users with weather information based on their g
 
 ## Usage
 
+First of all, the .env file needs to be created, for this, a copy of the .env.example file must be created and the necessary fields must be filled in.
+
+`cp .env.example .env`
+
 Install the required libraries:
 
 `pip install -r reqirements.txt`

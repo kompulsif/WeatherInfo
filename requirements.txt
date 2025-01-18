@@ -3,3 +3,4 @@ requests
 types-requests
 mypy
 pydantic
+python-dotenv

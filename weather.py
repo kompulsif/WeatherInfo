@@ -5,8 +5,13 @@ from pydantic import BaseModel
 import winsdk.windows.devices.geolocation as g
 import asyncio
 import json
+import os
+from dotenv import load_dotenv
 
-API_KEY: str = "YOUR_API_KEY"
+
+load_dotenv()
+
+API_KEY: str = os.environ["API_KEY"]
 QUERY: str = "https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline/{},{}/today?unitGroup={}&lang={}&key={}&contentType=json&include=days"
 SYMBOLS: Dict[str, str] = {"metric": "°C", "us": "°F", "uk": "°C", "base": "K"}
 
