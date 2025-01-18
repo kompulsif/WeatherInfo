@@ -1,0 +1,5 @@
+winsdk
+requests
+types-requests
+mypy
+pydantic
