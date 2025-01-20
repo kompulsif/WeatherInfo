@@ -69,6 +69,9 @@ class Weather:
                 "Response is not valid! Please check the connection and API key and try again.."
             )
             exit()
+        except Exception:
+            print("An error occurred while retrieving weather information!")
+            exit()
         else:
             return jsonData
 
@@ -81,8 +84,8 @@ class Weather:
         except PermissionError:
             print("Permission error! Please allow location access.")
             exit()
-        except Exception as e:
-            print("Error!", e)
+        except Exception:
+            print("An error occurred while accessing the location!")
             exit()
         else:
             if pos.coordinate is not None:
