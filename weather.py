@@ -2,80 +2,19 @@ import asyncio
 import json
 import os
 from argparse import ArgumentParser, Namespace
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 import winsdk.windows.devices.geolocation as g
 from dotenv import load_dotenv
-from pydantic import BaseModel
 from requests import Response, exceptions, get
+
+from models import *  # noqa: F403
 
 load_dotenv()
 
 API_KEY: str = os.environ["API_KEY"]
 QUERY: str = "https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline/{},{}/today?unitGroup={}&lang={}&key={}&contentType=json&include=days"
 SYMBOLS: Dict[str, str] = {"metric": "°C", "us": "°F", "uk": "°C", "base": "K"}
-
-
-class Station(BaseModel):
-    distance: int
-    latitude: float
-    longitude: float
-    useCount: int
-    id: str
-    name: str
-    quality: int
-    contribution: int
-
-
-class Day(BaseModel):
-    datetime: str
-    datetimeEpoch: int
-    tempmax: float
-    tempmin: float
-    temp: float
-    feelslikemax: float
-    feelslikemin: float
-    feelslike: float
-    dew: float
-    humidity: float
-    precip: Optional[float]
-    precipprob: Optional[int]
-    precipcover: float
-    preciptype: Optional[List[str]]
-    snow: Optional[float]
-    snowdepth: Optional[float]
-    windgust: float
-    windspeed: float
-    winddir: float
-    pressure: float
-    cloudcover: float
-    visibility: float
-    solarradiation: float
-    solarenergy: float
-    uvindex: int
-    severerisk: int
-    sunrise: Optional[str]
-    sunriseEpoch: Optional[int]
-    sunset: Optional[str]
-    sunsetEpoch: Optional[int]
-    moonphase: float
-    conditions: str
-    description: str
-    icon: str
-    stations: List[str]
-    source: str
-
-
-class WeatherResponse(BaseModel):
-    queryCost: int
-    latitude: float
-    longitude: float
-    resolvedAddress: str
-    address: str
-    timezone: str
-    tzoffset: int
-    days: List[Day] = []
-    stations: Dict[str, Station] = {}
 
 
 class Weather:
@@ -98,7 +37,7 @@ class Weather:
         # Get weather data and print the maximum temperature and description.
         data: Dict[Any, Any] = self.__getWeatherData()
 
-        weatherReponse: WeatherResponse = WeatherResponse(**data)
+        weatherReponse: WeatherResponse = WeatherResponse(**data)  # noqa: F405
         temp: float = weatherReponse.days[0].tempmax
         description: str = weatherReponse.days[0].description
 
