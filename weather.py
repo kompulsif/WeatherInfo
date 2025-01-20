@@ -1,8 +1,10 @@
 import asyncio
 import json
 import os
-from argparse import ArgumentParser, Namespace
-from typing import Any, Dict, List
+from argparse import ArgumentParser
+from logging import DEBUG, WARNING, Formatter, Handler, Logger, StreamHandler
+from logging.handlers import RotatingFileHandler
+from typing import Any, Dict, List, Tuple
 
 import winsdk.windows.devices.geolocation as g
 from dotenv import load_dotenv
@@ -15,6 +17,15 @@ load_dotenv()
 API_KEY: str = os.environ["API_KEY"]
 QUERY: str = "https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline/{},{}/today?unitGroup={}&lang={}&key={}&contentType=json&include=days"
 SYMBOLS: Dict[str, str] = {"metric": "°C", "us": "°F", "uk": "°C", "base": "K"}
+LOGGER: Logger = Logger(__name__)
+FORMATTER_CONSOLE: Formatter = Formatter("%(levelname)s - %(message)s")
+FORMATTER_FILE: Formatter = Formatter(
+    "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
+FILE_HANDLER: RotatingFileHandler = RotatingFileHandler(
+    filename="process_log.log", mode="a", maxBytes=50000
+)
+CONSOLE_HANDLER: Handler = StreamHandler()
 
 
 class Weather:
@@ -27,7 +38,7 @@ class Weather:
             if (not coordinates)
             else coordinates
         )
-
+        LOGGER.debug(f"Coordinates to use(variable -> cs): {cs}")
         self.coordinates: List[float] = cs
         self.lang: str = lang
         self.unitg: str = unitg
@@ -36,13 +47,13 @@ class Weather:
     def showClearText(self) -> None:
         # Get weather data and print the maximum temperature and description.
         data: Dict[Any, Any] = self.__getWeatherData()
-
+        LOGGER.info("Weather data received")
         weatherReponse: WeatherResponse = WeatherResponse(**data)  # noqa: F405
         temp: float = weatherReponse.days[0].tempmax
         description: str = weatherReponse.days[0].description
 
         print(
-            f"{self.coordinates[0]},{self.coordinates[1]} | {temp}{self.symbol} -> {description}"
+            f"\n\n{self.coordinates[0]},{self.coordinates[1]} | {temp}{self.symbol} -> {description}\n\n"
         )
 
     def __getUnitSymbol(self) -> str:
@@ -50,27 +61,29 @@ class Weather:
         try:
             return SYMBOLS[self.unitg]
         except Exception:
-            print("Unit Group error!")
+            LOGGER.exception("Unit group error")
             exit()
 
     def __getWeatherData(self) -> Dict[Any, Any]:
         # Format the query URL and fetch weather data.
+        LOGGER.info("Retrieving weather information")
         formattedQuery: str = QUERY.format(
             self.coordinates[0], self.coordinates[1], self.unitg, self.lang, API_KEY
         )
+        LOGGER.debug(f"Sent query: {formattedQuery}")
         try:
             res: Response = get(formattedQuery)
             jsonData: Dict[Any, Any] = res.json()
         except exceptions.RequestException:
-            print("Please check your internet connection or API key.")
+            LOGGER.exception("Please check your internet connection or API key.")
             exit()
         except json.JSONDecodeError:
-            print(
+            LOGGER.exception(
                 "Response is not valid! Please check the connection and API key and try again.."
             )
             exit()
         except Exception:
-            print("An error occurred while retrieving weather information!")
+            LOGGER.exception("An error occurred while retrieving weather information!")
             exit()
         else:
             return jsonData
@@ -78,25 +91,28 @@ class Weather:
     @staticmethod
     async def __getCoordinates() -> List[float]:
         # Get the current device's GPS coordinates.
+        LOGGER.info("GPS data Retrieving")
         locator: g.Geolocator = g.Geolocator()
         try:
             pos: g.Geoposition = await locator.get_geoposition_async()
         except PermissionError:
-            print("Permission error! Please allow location access.")
+            LOGGER.warning(
+                "Permission error! Location permission could not be obtained"
+            )
             exit()
         except Exception:
-            print("An error occurred while accessing the location!")
+            LOGGER.exception("An error occurred while accessing the location!")
             exit()
         else:
             if pos.coordinate is not None:
                 return [float(pos.coordinate.latitude), float(pos.coordinate.longitude)]
             else:
-                print("Unable to fetch coordinates.")
+                LOGGER.warning("Unable to fetch coordinates.")
                 exit()
 
 
-def getArguments() -> Namespace:
-    # Parse command line arguments.
+def getArguments() -> List[Tuple[str, str]]:
+    # Get arguments from the command line.
     parser: ArgumentParser = ArgumentParser()
     parser.add_argument(
         "--coordinates",
@@ -113,29 +129,50 @@ def getArguments() -> Namespace:
         default="metric",
         type=str,
     )
-    return parser.parse_args()
+    return parser.parse_args()._get_kwargs()
 
 
-if __name__ == "__main__":
-    # Get arguments from the command line.
-    args: Namespace = getArguments()
-    csarg: str = args.coordinates
-    lang: str = args.language.lower()
-    unitG: str = args.unitGroup.lower()
+def main() -> None:
+    # Configuring logger
+    LOGGER.setLevel(DEBUG)
+    FILE_HANDLER.setLevel(WARNING)
+    CONSOLE_HANDLER.setLevel(DEBUG)
 
+    FILE_HANDLER.setFormatter(FORMATTER_FILE)
+    CONSOLE_HANDLER.setFormatter(FORMATTER_CONSOLE)
+
+    LOGGER.addHandler(FILE_HANDLER)
+    LOGGER.addHandler(CONSOLE_HANDLER)
+
+    LOGGER.debug("Data Models created")
+
+    (csarg, lang, unitG) = getArguments()
+    LOGGER.debug(
+        f"getArguments() returned; coordinates: {csarg[1]} | language: {lang[1]} | unitGroup: {unitG[1]}"
+    )
     # If coordinates are provided in the command line, parse them.
-    if csarg != "gps":
+    if csarg[1] != "gps":
         try:
-            if csarg.startswith("'") and csarg.endswith("'"):
-                coordinates: List[float] = list(map(float, csarg[1:-1].split(",")))
+            if csarg[1].startswith("'") and csarg[1].endswith("'"):
+                coordinates: List[float] = list(map(float, csarg[1][1:-1].split(",")))
+                LOGGER.debug(
+                    f"Coordinates to use(variable coordinates ->): {coordinates}"
+                )
             else:
                 raise ValueError
         except Exception:
-            print("Format of coordinates; should be 'latitude,longitude'")
+            msg: str = f"Format of coordinates; should be 'latitude,longitude'\nUser entered: {csarg[1]}"
+            LOGGER.warning(msg)
+            LOGGER.exception(msg)
             exit()
     else:
         coordinates = []
 
     # Create Weather object and show the weather information.
-    weather: Weather = Weather(coordinates, lang, unitG)
+
+    weather: Weather = Weather(coordinates, lang[1], unitG[1])
     weather.showClearText()
+
+
+if __name__ == "__main__":
+    main()
