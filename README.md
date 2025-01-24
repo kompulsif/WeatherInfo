@@ -19,8 +19,13 @@ Install the required libraries:
 
 `pip install -r reqirements.txt`
 
-Run the script:
+Firstly, run the Redis Server(Ubuntu WSL was used):
+`sudo systemctl start redis`
 
+Run the Celery Worker. Run in terminal:
+`celery -A weather worker --loglevel=info --pool=solo`
+
+Then run the weather.py :
 `python weather.py --coordinates 'latitude,longitude' --language tr --unitGroup metric`
 
 Note: Use quotes for the value of the coordinate parameter.
