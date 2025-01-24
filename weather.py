@@ -7,6 +7,7 @@ from logging.handlers import RotatingFileHandler
 from typing import Any, Dict, List, Tuple
 
 import winsdk.windows.devices.geolocation as g
+from celery import Celery
 from dotenv import load_dotenv
 from requests import Response, exceptions, get
 
@@ -17,6 +18,16 @@ load_dotenv()
 API_KEY: str = os.environ["API_KEY"]
 QUERY: str = "https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline/{},{}/today?unitGroup={}&lang={}&key={}&contentType=json&include=days"
 SYMBOLS: Dict[str, str] = {"metric": "°C", "us": "°F", "uk": "°C", "base": "K"}
+BROKER: str = os.environ["REDIS_BROKER"].rstrip("/")
+BACKEND: str = os.environ["REDIS_BACKEND"].rstrip("/")
+PORT: str = os.environ["REDIS_PORT"]
+DB: str = os.environ["REDIS_DB"]
+weatherApp = Celery(
+    "weather",
+    broker=f"{BROKER}:{PORT}/{DB}",
+    backend=f"{BACKEND}:{PORT}/{DB}",
+)
+
 logger = Logger(__name__)
 formatter_console = Formatter("%(levelname)s - %(message)s")
 formatter_file = Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
@@ -38,21 +49,9 @@ class Weather:
         self.coordinates: List[float] = cs
         self.lang: str = lang
         self.unitg: str = unitg
-        self.symbol: str = self.__getUnitSymbol()
+        self.symbol: str = self.getUnitSymbol()
 
-    def showClearText(self) -> None:
-        # Get weather data and print the maximum temperature and description.
-        data: Dict[Any, Any] = self.__getWeatherData()
-        logger.info("Weather data received")
-        weatherReponse = WeatherResponse(**data)
-        temp: float = weatherReponse.days[0].tempmax
-        description: str = weatherReponse.days[0].description
-
-        print(
-            f"\n\n{self.coordinates[0]},{self.coordinates[1]} | {temp}{self.symbol} -> {description}\n\n"
-        )
-
-    def __getUnitSymbol(self) -> str:
+    def getUnitSymbol(self) -> str:
         # Return the unit symbol based on the unit group.
         try:
             return SYMBOLS[self.unitg]
@@ -60,7 +59,17 @@ class Weather:
             logger.exception("Unit group error")
             exit()
 
-    def __getWeatherData(self) -> Dict[Any, Any]:
+    async def showClearText(self) -> str:
+        # Get weather data and print the maximum temperature and description.
+        data: Dict[Any, Any] = await self.__getWeatherData()
+        logger.info("Weather data received")
+        weatherReponse = WeatherResponse(**data)
+        temp: float = weatherReponse.days[0].tempmax
+        description: str = weatherReponse.days[0].description
+
+        return f"\n\n{self.coordinates[0]},{self.coordinates[1]} | {temp}{self.symbol} -> {description}\n\n"
+
+    async def __getWeatherData(self) -> Dict[Any, Any]:
         # Format the query URL and fetch weather data.
         logger.info("Retrieving weather information")
         formattedQuery: str = QUERY.format(
@@ -86,7 +95,7 @@ class Weather:
 
     @staticmethod
     async def __getCoordinates() -> List[float]:
-        # Get the current device's GPS coordinates.
+        # Get the current device's GPS coordinates asynchronously.
         logger.info("GPS data Retrieving")
         locator: g.Geolocator = g.Geolocator()
         try:
@@ -128,6 +137,15 @@ def getArguments() -> List[Tuple[str, str]]:
     return parser.parse_args()._get_kwargs()
 
 
+@weatherApp.task(bind=True)
+def weatherRequestResults(self, coordinates: List[float], lang: str, unitg: str) -> str:
+    # Create Weather object and show the weather information.
+    weather = Weather(coordinates, lang, unitg)
+
+    result = asyncio.run(weather.showClearText())
+    return result
+
+
 def main() -> None:
     # Configuring logger
     logger.setLevel(DEBUG)
@@ -164,10 +182,13 @@ def main() -> None:
     else:
         coordinates = []
 
-    # Create Weather object and show the weather information.
+    try:
+        results = weatherRequestResults.delay(coordinates, lang[1], unitG[1])
+        print(results.get(timeout=5))
 
-    weather = Weather(coordinates, lang[1], unitG[1])
-    weather.showClearText()
+    except Exception as msg:
+        logger.critical(msg)
+        logger.exception(msg)
 
 
 if __name__ == "__main__":
