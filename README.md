@@ -4,7 +4,8 @@ This Python application provides users with weather information based on their g
 
 ## Features
 
-- Users can get weather information either using GPS location or manually provided coordinates.
+- Users can get weather information either using GPS location, IP location or manually provided coordinates.
+* --coordinates parameter can take them; `gps`, `ip`, `c:latitude,longitude`
 - The temperature unit can be selected as `metric`, `us`, `uk`, or `base`.
 - The output language can be set to Turkish or any other selected language.
 - Weather data includes the daily maximum temperature and a description.
@@ -29,6 +30,7 @@ Run the Celery Worker. Run in terminal:
 
 Then run the weather.py :
 
-`python weather.py --coordinates 'latitude,longitude' --language tr --unitGroup metric`
+`python weather.py --coordinates 'c:latitude,longitude' --language tr --unitGroup metric`
 
-Note: Use quotes for the value of the coordinate parameter.
+Ex:
+`python weather.py --coordinates c:39.927200,32.864400 --language tr --unitGroup metric`

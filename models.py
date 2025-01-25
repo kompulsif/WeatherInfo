@@ -26,7 +26,7 @@ class Day(BaseModel):
     dew: float
     humidity: float
     precip: Optional[float]
-    precipprob: Optional[int]
+    precipprob: Optional[int | float]
     precipcover: float
     preciptype: Optional[List[str]]
     snow: Optional[float]
