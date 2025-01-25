@@ -8,7 +8,6 @@ from typing import Any, Dict, List, Tuple
 
 from celery import Celery
 from dotenv import load_dotenv
-from pydantic import ValidationError
 from requests import Response, exceptions, get
 
 from models import *
