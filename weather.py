@@ -3,9 +3,9 @@ import os
 from argparse import ArgumentParser
 from logging import DEBUG, WARNING, Formatter, Logger, StreamHandler
 from logging.handlers import RotatingFileHandler
+from platform import system
 from typing import Any, Dict, List, Tuple
 
-import winsdk.windows.devices.geolocation as g
 from celery import Celery
 from dotenv import load_dotenv
 from pydantic import ValidationError
@@ -13,6 +13,9 @@ from requests import Response, exceptions, get
 
 from models import *
 
+if (system() == "Windows"):
+    import winsdk.windows.devices.geolocation as g
+    
 load_dotenv()
 
 WEATHER_API_KEY: str = os.environ["WEATHER_API_KEY"]

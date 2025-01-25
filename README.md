@@ -20,6 +20,10 @@ Install the required libraries:
 
 `pip install -r reqirements.txt`
 
+If you are using Windows:
+
+`pip install winsdk`
+
 Firstly, run the Redis Server(Ubuntu WSL was used):
 
 `sudo systemctl start redis`
