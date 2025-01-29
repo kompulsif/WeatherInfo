@@ -12,9 +12,9 @@ from requests import Response, exceptions, get
 
 from models import *
 
-if (system() == "Windows"):
+if system() == "Windows":
     import winsdk.windows.devices.geolocation as g
-    
+
 load_dotenv()
 
 WEATHER_API_KEY: str = os.environ["WEATHER_API_KEY"]
