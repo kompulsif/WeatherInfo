@@ -94,7 +94,7 @@ def getDayData() -> Dict[str, Any]:
 
 @pytest.fixture
 def getResponseData(
-    # Response Api Request
+    # Response Weather Api Request
     getDayData: Dict[str, Any],
     getStationData: Dict[str, Any],
 ) -> Dict[str, Any]:
