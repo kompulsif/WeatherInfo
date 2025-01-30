@@ -5,7 +5,6 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 
 from platform import system
 from typing import Any, Dict
-from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -18,8 +17,10 @@ def weather() -> Weather:
     # return Weather object
     return Weather()
 
+
 @pytest.fixture
 def getIpData() -> Dict[str, str]:
+    # api Response Data by Ip
     return {
         "ip": "123.123.123.123",
         "hostname": "hostname.comunity",
@@ -29,9 +30,9 @@ def getIpData() -> Dict[str, str]:
         "loc": "39.9272,32.8644",
         "org": "Turk Telekom",
         "postal": "t-postal:06636",
-        "timezone": "Europe/Istanbul"
-}
-    
+        "timezone": "Europe/Istanbul",
+    }
+
 
 @pytest.fixture
 def getStationData() -> Dict[str, Any]:
@@ -200,52 +201,112 @@ def test_unit_symbol(weather: Weather) -> None:
     assert symbol == "K"
 
 
-@patch("requests.get")
-def test_api_response(mock_get, getResponseData: Dict[str, Any]) -> None:
+def test_weather_api_response(mocker, getResponseData: Dict[str, Any]) -> None:
     # test __getWeatherData method
+    mock_rs = mocker.patch("requests.get")
+    mock_rs.return_value.json.return_value = getResponseData
 
     import requests as r
 
-    mock_rs = MagicMock()
-    mock_rs.json.return_value = getResponseData
-    mock_get.return_value = mock_rs
-    
-    rs: Dict[str, Any] = r.get(
+    r: Dict[str, Any] = r.get(
         "https://weather.visualcrossing.com/api/test-request"
+    ).json()
+
+    assert (
+        len(
+            list(
+                filter(
+                    lambda x: x in r.keys(),
+                    [
+                        "queryCost",
+                        "latitude",
+                        "longitude",
+                        "resolvedAddress",
+                        "address",
+                        "timezone",
+                        "tzoffset",
+                        "days",
+                        "stations",
+                    ],
+                )
+            )
+        )
+        == 9
     )
-    assert rs.json() == getResponseData
+
+    assert r["queryCost"] == 1
+    assert r["latitude"] == 39.9272
+    assert r["longitude"] == 32.8644
+    assert r["resolvedAddress"] == "39.927200,32.864400"
+    assert r["address"] == "39.927200,32.864400"
+    assert r["timezone"] == "Europe/Istanbul"
+    assert r["tzoffset"] == 3
+    assert len(r["days"]) >= 1 and len(
+        list(filter(lambda x: isinstance(x, Day), r["days"]))
+    ) == len(r["days"])
+    assert len(r["stations"]) >= 1 and len(
+        list(filter(lambda x: isinstance(x, Station), r["stations"].values()))
+    ) == len(r["stations"])
 
 
-@patch("winsdk.windows.devices.geolocation.Geolocator", autospec=True)
-def test_location_by_gps(mock_geolocation) -> None:
-    if system() == "Windows":
-        
-        import winsdk.windows.devices.geolocation as t
-        
-        mock_pos = MagicMock()
+def test_location_by_gps(mocker) -> None:
+    # test Weather __getCoordinatesByGPS
+    if system() != "Windows":
+        mock_pos = mocker.MagicMock()
         mock_pos.coordinate.latitude = 39.927200
         mock_pos.coordinate.longitude = 32.864400
-        
-        mock_geolocation.get_geoposition_async.return_value = mock_pos
-        mock_geolocation.return_value = mock_geolocation
-        
+
+        import winsdk.windows.devices.geolocation as t
+
+        mock_geolocation = mocker.patch("winsdk.windows.devices.geolocation.Geolocator")
+        mock_geolocation.return_value.get_geoposition_async.return_value = mock_pos
+
         g = t.Geolocator().get_geoposition_async()
         assert g.coordinate.latitude == 39.927200
         assert g.coordinate.longitude == 32.864400
-        
+
     else:
-        raise TypeError("Your operating system is not suitable for this test. Must be windows")
+        pytest.skip(
+            "test_location_by_ip test will be suitable for your operating system."
+        )
 
 
-@patch("requests.get")
-def test_location_by_ip(mock_get, getIpData: Dict[str, str]) -> None:
-    
-    res_mock = MagicMock()
-    res_mock.json.return_value = getIpData
-    
-    mock_get.return_value = res_mock
-    
+def test_location_by_ip(mocker, getIpData: Dict[str, str]) -> None:
+    # test Weather __getCoordinatesByIP
+    mock_get = mocker.patch("requests.get")
+    mock_get.return_value.json.return_value = getIpData
+
     import requests
-    
-    r = requests.get("https://ipinfo.io/json?token=test")
-    assert r.json() == getIpData
+
+    r: Dict[str, str] = requests.get("https://ipinfo.io/json?token=test").json()
+
+    assert (
+        len(
+            list(
+                filter(
+                    lambda x: x in r.keys(),
+                    [
+                        "ip",
+                        "hostname",
+                        "city",
+                        "region",
+                        "country",
+                        "loc",
+                        "org",
+                        "postal",
+                        "timezone",
+                    ],
+                )
+            )
+        )
+        == 9
+    )
+    assert r["ip"] == "123.123.123.123"
+    assert r["hostname"] == "hostname.comunity"
+    assert r["city"] == "Ankara"
+    assert r["region"] == "Ankara"
+    assert r["country"] == "TR"
+    assert r["loc"] == "39.9272,32.8644"
+    assert r["org"] == "Turk Telekom"
+    assert r["postal"] == "t-postal:06636"
+    assert r["timezone"] == "Europe/Istanbul"

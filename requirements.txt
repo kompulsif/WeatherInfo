@@ -6,3 +6,4 @@ python-dotenv
 celery
 redis
 pytest
+pytest-mock

@@ -38,3 +38,9 @@ Then run the weather.py :
 
 Ex:
 `python weather.py --coordinates c:39.927200,32.864400 --language tr --unitGroup metric`
+
+## Test Uses
+
+Specify your test directories using the `pyproject.toml` file, `["tests"]` set by default.
+
+Run at the terminal: `pytest`
